@@ -248,6 +248,11 @@ AnimateMarkerLayer.registerRenderer('canvas', class extends maptalks.renderer.Ov
         clearTimeout(this._animTimeout);
     }
 
+    onZoomStart() {
+        this._cancelAnim();
+    }
+
+
     onZoomEnd() {
         this._prepare();
         super.onZoomEnd.apply(this, arguments);

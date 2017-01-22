@@ -250,7 +250,7 @@ AnimateMarkerLayer.registerRenderer('canvas', class extends maptalks.renderer.Ov
 
     onZoomEnd() {
         this._prepare();
-        maptalks.renderer.Canvas.prototype.onZoomEnd.apply(this, arguments);
+        super.onZoomEnd.apply(this, arguments);
     }
 
     onRemove() {
@@ -269,7 +269,7 @@ AnimateMarkerLayer.registerRenderer('canvas', class extends maptalks.renderer.Ov
         };
         const animations = this.layer.options['animation'] ? this.layer.options['animation'].split(',') : [];
         for (let i = 0; i < animations.length; i++) {
-            let trim = maptalks.StringUtil.trim(animations[i]);
+            let trim = maptalks.Util.trim(animations[i]);
             if (trim === 'fade') {
                 anim.fade = true;
             } else if (trim === 'scale') {

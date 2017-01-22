@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>maptalks.heat demo</title>
+    <script src="https://unpkg.com/maptalks@<2.0.0/dist/maptalks.js"></script>
+    <script src="../dist/maptalks.animatemarker.js"></script>
+    <link type="text/css" rel="stylesheet" href="https://unpkg.com/maptalks@<2.0.0/dist/maptalks.css">
+    <style>
+        html,body{
+            margin:0px;
+            height:100%;
+            width: 100%;
+         }
+        #map { width: 100%; height: 100%; }
+        .ghbtns { position: relative; top: 4px; margin-left: 5px; }
+        a { color: #0077ff; }
+    </style>
+</head>
+<body>
+<div id="map"></div>
+<script>
+    var map = new maptalks.Map("map",{
+        center:      [0, 0],
+        zoom:  2,
+        attributionControl : {
+            'content' : '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, &copy; <a href="https://carto.com/attributions">CARTO</a>'
+        },
+        baseLayer : new maptalks.TileLayer("base",{
+            'urlTemplate' : 'http://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}.png',
+            'subdomains'  : ['a','b','c','d','e']
+        })
+    });
+
+    function getGradient(colors) {
+        return {
+            type : 'radial',
+            colorStops : [
+              [0.70, 'rgba(' + colors.join() + ', 0.5)'],
+              [0.30, 'rgba(' + colors.join() + ', 1)'],
+              [0.20, 'rgba(' + colors.join() + ', 1)'],
+              [0.00 , 'rgba(' + colors.join() + ', 0)']
+            ]
+        };
+    }
+
+    // earthquakes data from usgs.gov
+    maptalks.Ajax.getJSON(
+        'http://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_day.geojson',
+        function (err, data) {
+            console.log(data.features.length);
+            var geometries = maptalks.GeoJSON.toGeometry(data);
+            var layer = new maptalks.AnimateMarkerLayer(
+                'animatemarker',
+                {
+                    'animation' : 'scale,fade',
+                    'randomAnimation' : true
+                }
+            )
+            .setStyle([
+                {
+                    filter : ['<=', 'mag', 2],
+                    symbol : {
+                        'markerType' : 'ellipse',
+                        'markerLineWidth' : 0,
+                        'markerFill' : getGradient([135, 196, 240]),
+                        'markerFillOpacity' : 0.8,
+                        'markerWidth' : 5,
+                        'markerHeight' : 5
+                    }
+                },
+                {
+                    filter : ['<=', 'mag', 5],
+                    symbol : {
+                        'markerType' : 'ellipse',
+                        'markerLineWidth' : 0,
+                        'markerFill' : getGradient([255, 255, 0]),
+                        'markerFillOpacity' : 0.8,
+                        'markerWidth' : 12,
+                        'markerHeight' : 12
+                    }
+                },
+                {
+                    filter : ['>', 'mag', 5],
+                    symbol : {
+                        'markerType' : 'ellipse',
+                        'markerLineWidth' : 0,
+                        'markerFill' : getGradient([216, 115, 149]),
+                        'markerFillOpacity' : 0.8,
+                        'markerWidth' : 20,
+                        'markerHeight' : 20
+                    }
+                }
+            ])
+            .addGeometry(geometries)
+            .addTo(map);
+
+        }
+    );
+
+
+</script>
+</body>
+</html>

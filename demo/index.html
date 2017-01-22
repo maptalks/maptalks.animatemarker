@@ -44,6 +44,7 @@
             var geometries = maptalks.GeoJSON.toGeometry(data);
             var layer = new maptalks.AnimateMarkerLayer(
                 'animatemarker',
+                geometries,
                 {
                     'animation' : 'scale,fade',
                     'randomAnimation' : true
@@ -84,7 +85,6 @@
                     }
                 }
             ])
-            .addGeometry(geometries)
             .addTo(map);
 
         }

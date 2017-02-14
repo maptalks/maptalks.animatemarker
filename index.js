@@ -180,7 +180,7 @@ AnimateMarkerLayer.registerRenderer('canvas', class extends maptalks.renderer.Ov
             extent = new maptalks.PointExtent(0, 0, size['width'], size['height']),
             min = this._extent2D.getMin(),
             duration = this.layer.options['animationDuration'],
-            now = maptalks.Util.now();
+            now = Date.now();
         const anim = this._getAnimation();
         const globalAlpha = ctx.globalAlpha;
         this._currentMarkers.forEach(function (m) {
@@ -274,7 +274,7 @@ AnimateMarkerLayer.registerRenderer('canvas', class extends maptalks.renderer.Ov
         };
         const animations = this.layer.options['animation'] ? this.layer.options['animation'].split(',') : [];
         for (let i = 0; i < animations.length; i++) {
-            let trim = maptalks.Util.trim(animations[i]);
+            let trim = maptalks.StringUtil.trim(animations[i]);
             if (trim === 'fade') {
                 anim.fade = true;
             } else if (trim === 'scale') {

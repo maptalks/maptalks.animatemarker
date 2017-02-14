@@ -212,7 +212,7 @@ AnimateMarkerLayer.registerRenderer('canvas', function (_maptalks$renderer$Ov) {
             extent = new maptalks.PointExtent(0, 0, size['width'], size['height']),
             min = this._extent2D.getMin(),
             duration = this.layer.options['animationDuration'],
-            now = maptalks.Util.now();
+            now = Date.now();
         var anim = this._getAnimation();
         var globalAlpha = ctx.globalAlpha;
         this._currentMarkers.forEach(function (m) {
@@ -307,7 +307,7 @@ AnimateMarkerLayer.registerRenderer('canvas', function (_maptalks$renderer$Ov) {
         };
         var animations = this.layer.options['animation'] ? this.layer.options['animation'].split(',') : [];
         for (var i = 0; i < animations.length; i++) {
-            var trim = maptalks.Util.trim(animations[i]);
+            var trim = maptalks.StringUtil.trim(animations[i]);
             if (trim === 'fade') {
                 anim.fade = true;
             } else if (trim === 'scale') {

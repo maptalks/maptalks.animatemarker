@@ -1,3 +1,4 @@
 /**/*
-dist/*.gz
 !dist/*.js
+!dist/*.css
+!ACKNOWLEDGEMENT

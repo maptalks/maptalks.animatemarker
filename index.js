@@ -27,7 +27,6 @@ const options = {
     'animationOnce' : false,
     'randomAnimation' : true,
     'animationDuration' : 3000,
-    'symbol' : null,
     'fps' : 24
 };
 
@@ -61,7 +60,7 @@ export class AnimateMarkerLayer extends maptalks.VectorLayer {
         const geos = profile['geometries'];
         const geometries = [];
         for (let i = 0; i < geos.length; i++) {
-            let geo = maptalks.Geometry.fromJSON(geos[i]);
+            const geo = maptalks.Geometry.fromJSON(geos[i]);
             if (geo) {
                 geometries.push(geo);
             }
@@ -89,7 +88,7 @@ AnimateMarkerLayer.registerRenderer('canvas', class extends maptalks.renderer.Ov
             this._needUpdate = false;
         }
         this._animate();
-        if (!this.isLoaded()) {
+        if (!this.layer.isLoaded()) {
             this.completeRender();
         }
     }
@@ -155,13 +154,17 @@ AnimateMarkerLayer.registerRenderer('canvas', class extends maptalks.renderer.Ov
             this._startTime = now;
         }
         const options = this.layer.options;
-        if (!this.getMap()._zooming && !this.getMap()._moving &&
+        if (this.getMap() && !this.getMap().isZooming() && !this.getMap().isMoving() && !this.getMap().isDragRotating() &&
             !(options['animationOnce'] && (now - this._startTime) > options['animationDuration'])) {
             const fps = this.layer.options['fps'] || 24;
             if (fps >= 1000 / 16) {
                 this._animId = maptalks.Util.requestAnimFrame(this._animFn);
             } else {
                 this._animTimeout = setTimeout(() => {
+                    if (!this._animFn) {
+                        // removed
+                        return;
+                    }
                     if (maptalks.Browser.ie9) {
                         // ie9 doesn't support RAF
                         this._animFn();
@@ -236,9 +239,9 @@ AnimateMarkerLayer.registerRenderer('canvas', class extends maptalks.renderer.Ov
 
     _prepareSprites(allSymbols) {
         this._spriteCache = {};
-        for (let p in allSymbols) {
-            let symbol = allSymbols[p];
-            let sprite = new maptalks.Marker([0, 0], { 'symbol' : symbol })._getSprite(this.resources);
+        for (const p in allSymbols) {
+            const symbol = allSymbols[p];
+            const sprite = new maptalks.Marker([0, 0], { 'symbol' : symbol })._getSprite(this.resources);
             this._spriteCache[p] = sprite;
         }
     }
@@ -274,7 +277,7 @@ AnimateMarkerLayer.registerRenderer('canvas', class extends maptalks.renderer.Ov
         };
         const animations = this.layer.options['animation'] ? this.layer.options['animation'].split(',') : [];
         for (let i = 0; i < animations.length; i++) {
-            let trim = maptalks.StringUtil.trim(animations[i]);
+            const trim = maptalks.StringUtil.trim(animations[i]);
             if (trim === 'fade') {
                 anim.fade = true;
             } else if (trim === 'scale') {

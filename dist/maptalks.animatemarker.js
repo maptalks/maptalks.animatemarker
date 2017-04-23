@@ -38,7 +38,6 @@ var options = {
     'animationOnce': false,
     'randomAnimation': true,
     'animationDuration': 3000,
-    'symbol': null,
     'fps': 24
 };
 
@@ -118,7 +117,7 @@ AnimateMarkerLayer.registerRenderer('canvas', function (_maptalks$renderer$Ov) {
             this._needUpdate = false;
         }
         this._animate();
-        if (!this.isLoaded()) {
+        if (!this.layer.isLoaded()) {
             this.completeRender();
         }
     };
@@ -188,12 +187,16 @@ AnimateMarkerLayer.registerRenderer('canvas', function (_maptalks$renderer$Ov) {
             this._startTime = now;
         }
         var options = this.layer.options;
-        if (!this.getMap()._zooming && !this.getMap()._moving && !(options['animationOnce'] && now - this._startTime > options['animationDuration'])) {
+        if (this.getMap() && !this.getMap().isZooming() && !this.getMap().isMoving() && !this.getMap().isDragRotating() && !(options['animationOnce'] && now - this._startTime > options['animationDuration'])) {
             var fps = this.layer.options['fps'] || 24;
             if (fps >= 1000 / 16) {
                 this._animId = maptalks.Util.requestAnimFrame(this._animFn);
             } else {
                 this._animTimeout = setTimeout(function () {
+                    if (!_this3._animFn) {
+                        // removed
+                        return;
+                    }
                     if (maptalks.Browser.ie9) {
                         // ie9 doesn't support RAF
                         _this3._animFn();

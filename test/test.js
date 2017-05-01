@@ -77,7 +77,7 @@ describe('AnimateMarkerLayer', function () {
 
     it('should be able to update marker\' symbol', function (done) {
         var marker = new maptalks.Marker(map.getCenter());
-        var layer = new maptalks.AnimateMarkerLayer('g', [new maptalks.Marker(map.getCenter()), marker], { animation : 'scale' });
+        var layer = new maptalks.AnimateMarkerLayer('g', [new maptalks.Marker(map.getCenter()), marker], { animation : false });
         layer.once('add', function () {
             layer.once('layerload', function () {
                 expect(layer).to.be.painted(0, 0, [255, 255, 255]);

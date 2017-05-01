@@ -35,7 +35,7 @@ IE 9-11, Chrome, Firefox, other modern and mobile browsers.
 
 ## API Reference
 
-```AnimateMarkerLayer``` is a subclass of ```maptalks.VectorLayer``` and inherits all the methods of its parent.
+```AnimateMarkerLayer``` is a subclass of [maptalks.VectorLayer](http://docs.maptalks.org/api/maptalks.VectorLayer.html) and inherits all the methods of its parent.
 
 ### `Constructor`
 
@@ -51,6 +51,7 @@ new maptalks.AnimateMarkerLayer(id, data, options)
     * randomAnimation **Boolean** animation begins randomly (true by default)
     * animationOnce **Boolean** whether animation only run once (false by default)
     * fps **Number** fps of animation (24 by default)
+    * Other options defined in [maptalks.VectorLayer](http://docs.maptalks.org/api/maptalks.VectorLayer.html)
 
 ### `config(key, value)`
 

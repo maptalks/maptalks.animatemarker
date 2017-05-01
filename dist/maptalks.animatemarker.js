@@ -1,5 +1,5 @@
 /*!
- * maptalks.animatemarker v0.1.1
+ * maptalks.animatemarker v0.1.2
  * LICENSE : MIT
  * (c) 2016-2017 maptalks.org
  */
@@ -125,6 +125,10 @@ AnimateMarkerLayer.registerRenderer('canvas', function (_maptalks$renderer$Ov) {
         }
     };
 
+    _class.prototype.drawOnInteracting = function drawOnInteracting() {
+        this._drawAllMarkers(this._drawnMarkers);
+    };
+
     _class.prototype.onCanvasCreate = function onCanvasCreate() {
         this._prepare();
     };
@@ -181,8 +185,8 @@ AnimateMarkerLayer.registerRenderer('canvas', function (_maptalks$renderer$Ov) {
         var _this3 = this;
 
         this.prepareCanvas();
-        this._drawMarkers();
-        var now = maptalks.Util.now();
+        this._drawAllMarkers(this._currentMarkers);
+        var now = Date.now();
         if (!this._animFn) {
             this._animFn = function () {
                 this._animate();
@@ -190,7 +194,7 @@ AnimateMarkerLayer.registerRenderer('canvas', function (_maptalks$renderer$Ov) {
             this._startTime = now;
         }
         var options = this.layer.options;
-        if (this.getMap() && !this.getMap().isZooming() && !this.getMap().isMoving() && !this.getMap().isDragRotating() && !(options['animationOnce'] && now - this._startTime > options['animationDuration'])) {
+        if (this.getMap() && !this.getMap().isInteracting() && !(options['animationOnce'] && now - this._startTime > options['animationDuration'])) {
             var fps = this.layer.options['fps'] || 24;
             if (fps >= 1000 / 16) {
                 this._animId = maptalks.Util.requestAnimFrame(this._animFn);
@@ -211,62 +215,65 @@ AnimateMarkerLayer.registerRenderer('canvas', function (_maptalks$renderer$Ov) {
         }
     };
 
-    _class.prototype._drawMarkers = function _drawMarkers() {
-        var ctx = this.context,
-            map = this.getMap(),
-            size = map.getSize(),
-            extent = new maptalks.PointExtent(0, 0, size['width'], size['height']),
-            min = this._extent2D.getMin(),
-            duration = this.layer.options['animationDuration'],
-            now = Date.now();
-        var anim = this._getAnimation();
-        var globalAlpha = ctx.globalAlpha;
-        this._currentMarkers.forEach(function (m) {
+    _class.prototype._drawAllMarkers = function _drawAllMarkers(markers) {
+        var _this4 = this;
+
+        var map = this.getMap(),
+            extent = map.getContainerExtent();
+        var now = this._drawnTime = Date.now();
+        var anim = this._drawnAnim = this._getAnimation();
+        this._drawnMarkers = [];
+        markers.forEach(function (m) {
             if (!m.g.isVisible()) {
                 return;
             }
-            var r = (now - m.start) % duration / duration;
-            var scale = anim.scale ? r : 1;
-
-            var p = m.point.substract(min);
-            if (!extent.contains(p)) {
+            var point = map.coordinateToContainerPoint(m.coordinates);
+            if (!extent.contains(point)) {
                 return;
             }
-            var op = anim.fade ? r >= 0.5 ? 2 - r * 2 : 1 : 1;
-            var key = m['cacheKey'];
-            var cache = this._spriteCache[key];
-            var offset = cache.offset,
-                w = cache.canvas.width,
-                h = cache.canvas.height;
-            if (cache && op > 0) {
-                ctx.globalAlpha = globalAlpha * op;
-                ctx.drawImage(cache.canvas, p.x + offset.x - w * scale / 2, p.y + offset.y - h * scale / 2, w * scale, h * scale);
-                ctx.globalAlpha = globalAlpha;
-            }
+            _this4._drawMarker(m, point, anim, now);
+            _this4._drawnMarkers.push(m);
         }, this);
         this.requestMapToRender();
     };
 
-    _class.prototype._prepare = function _prepare() {
-        var _this4 = this;
+    _class.prototype._drawMarker = function _drawMarker(m, point, anim, now) {
+        var duration = this.layer.options['animationDuration'];
+        var ctx = this.context;
+        var globalAlpha = ctx.globalAlpha;
+        var r = (now - m.start) % duration / duration;
+        var op = anim.fade ? r >= 0.5 ? 2 - r * 2 : 1 : 1;
+        var scale = anim.scale ? r : 1;
+        var key = m['cacheKey'];
+        var cache = this._spriteCache[key];
+        var offset = cache.offset,
+            w = cache.canvas.width,
+            h = cache.canvas.height;
+        if (cache && op > 0) {
+            ctx.globalAlpha = globalAlpha * op;
+            ctx.drawImage(cache.canvas, point.x + offset.x - w * scale / 2, point.y + offset.y - h * scale / 2, w * scale, h * scale);
+            ctx.globalAlpha = globalAlpha;
+        }
+    };
 
-        var map = this.getMap(),
-            markers = [];
+    _class.prototype._prepare = function _prepare() {
+        var _this5 = this;
+
+        var markers = [];
         var allSymbols = {};
         this.layer.forEach(function (g) {
-            _this4._currentGeo = g;
+            _this5._currentGeo = g;
             var symbol = g._getInternalSymbol() === g.options['symbol'] ? defaultSymbol : g._getInternalSymbol();
-            var point = map.coordinateToPoint(g.getCoordinates());
 
             var cacheKey = JSON.stringify(symbol);
             if (!allSymbols[cacheKey]) {
                 allSymbols[cacheKey] = symbol;
             }
             markers.push({
-                'point': point,
+                'coordinates': g.getCoordinates(),
                 'cacheKey': cacheKey,
                 //time to start animation
-                'start': _this4.layer.options['randomAnimation'] ? Math.random() * _this4.layer.options['animationDuration'] : 0,
+                'start': _this5.layer.options['randomAnimation'] ? Math.random() * _this5.layer.options['animationDuration'] : 0,
                 'g': g
             });
         });
@@ -288,13 +295,16 @@ AnimateMarkerLayer.registerRenderer('canvas', function (_maptalks$renderer$Ov) {
         clearTimeout(this._animTimeout);
     };
 
-    _class.prototype.onZoomStart = function onZoomStart() {
+    _class.prototype.onMoveStart = function onMoveStart() {
         this._cancelAnim();
     };
 
-    _class.prototype.onZoomEnd = function onZoomEnd() {
-        this._prepare();
-        _maptalks$renderer$Ov.prototype.onZoomEnd.apply(this, arguments);
+    _class.prototype.onDragRotateStart = function onDragRotateStart() {
+        this._cancelAnim();
+    };
+
+    _class.prototype.onZoomStart = function onZoomStart() {
+        this._cancelAnim();
     };
 
     _class.prototype.onRemove = function onRemove() {
@@ -304,6 +314,7 @@ AnimateMarkerLayer.registerRenderer('canvas', function (_maptalks$renderer$Ov) {
         delete this._animFn;
         delete this._spriteCache;
         delete this._currentMarkers;
+        delete this._drawnMarkers;
     };
 
     _class.prototype._getAnimation = function _getAnimation() {
@@ -313,7 +324,7 @@ AnimateMarkerLayer.registerRenderer('canvas', function (_maptalks$renderer$Ov) {
         };
         var animations = this.layer.options['animation'] ? this.layer.options['animation'].split(',') : [];
         for (var i = 0; i < animations.length; i++) {
-            var trim = maptalks.StringUtil.trim(animations[i]);
+            var trim = trimStr(animations[i]);
             if (trim === 'fade') {
                 anim.fade = true;
             } else if (trim === 'scale') {
@@ -327,10 +338,14 @@ AnimateMarkerLayer.registerRenderer('canvas', function (_maptalks$renderer$Ov) {
     return _class;
 }(maptalks.renderer.OverlayLayerCanvasRenderer));
 
+function trimStr(str) {
+    return str.trim ? str.trim() : str.replace(/^\s+|\s+$/g, '');
+}
+
 exports.AnimateMarkerLayer = AnimateMarkerLayer;
 
 Object.defineProperty(exports, '__esModule', { value: true });
 
-typeof console !== 'undefined' && console.log('maptalks.animatemarker v0.1.1, requires maptalks@^0.23.0.');
+typeof console !== 'undefined' && console.log('maptalks.animatemarker v0.1.2, requires maptalks@^0.23.0.');
 
 })));

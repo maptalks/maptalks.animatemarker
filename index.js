@@ -93,6 +93,10 @@ AnimateMarkerLayer.registerRenderer('canvas', class extends maptalks.renderer.Ov
         }
     }
 
+    drawOnInteracting() {
+        this._drawAllMarkers(this._drawnMarkers);
+    }
+
     onCanvasCreate() {
         this._prepare();
     }
@@ -145,8 +149,8 @@ AnimateMarkerLayer.registerRenderer('canvas', class extends maptalks.renderer.Ov
 
     _animate() {
         this.prepareCanvas();
-        this._drawMarkers();
-        const now = maptalks.Util.now();
+        this._drawAllMarkers(this._currentMarkers);
+        const now = Date.now();
         if (!this._animFn) {
             this._animFn = function () {
                 this._animate();
@@ -154,7 +158,7 @@ AnimateMarkerLayer.registerRenderer('canvas', class extends maptalks.renderer.Ov
             this._startTime = now;
         }
         const options = this.layer.options;
-        if (this.getMap() && !this.getMap().isZooming() && !this.getMap().isMoving() && !this.getMap().isDragRotating() &&
+        if (this.getMap() && !this.getMap().isInteracting() &&
             !(options['animationOnce'] && (now - this._startTime) > options['animationDuration'])) {
             const fps = this.layer.options['fps'] || 24;
             if (fps >= 1000 / 16) {
@@ -176,57 +180,58 @@ AnimateMarkerLayer.registerRenderer('canvas', class extends maptalks.renderer.Ov
         }
     }
 
-    _drawMarkers() {
-        const ctx = this.context,
-            map = this.getMap(),
-            size = map.getSize(),
-            extent = new maptalks.PointExtent(0, 0, size['width'], size['height']),
-            min = this._extent2D.getMin(),
-            duration = this.layer.options['animationDuration'],
-            now = Date.now();
-        const anim = this._getAnimation();
-        const globalAlpha = ctx.globalAlpha;
-        this._currentMarkers.forEach(function (m) {
+    _drawAllMarkers(markers) {
+        const map = this.getMap(),
+            extent = map.getContainerExtent();
+        const now = this._drawnTime = Date.now();
+        const anim = this._drawnAnim = this._getAnimation();
+        this._drawnMarkers = [];
+        markers.forEach(m => {
             if (!m.g.isVisible()) {
                 return;
             }
-            const r = ((now - m.start) % (duration)) / duration;
-            const scale = anim.scale ? r : 1;
-
-            const p = m.point.substract(min);
-            if (!extent.contains(p)) {
+            const point = map.coordinateToContainerPoint(m.coordinates);
+            if (!extent.contains(point)) {
                 return;
             }
-            const op = anim.fade ? (r >= 0.5 ? 2 - r * 2 : 1) : 1;
-            const key = m['cacheKey'];
-            const cache = this._spriteCache[key];
-            const offset = cache.offset,
-                w = cache.canvas.width,
-                h = cache.canvas.height;
-            if (cache && op > 0) {
-                ctx.globalAlpha = globalAlpha * op;
-                ctx.drawImage(cache.canvas, p.x + offset.x - w * scale / 2, p.y + offset.y - h * scale / 2, w * scale, h * scale);
-                ctx.globalAlpha = globalAlpha;
-            }
+            this._drawMarker(m, point, anim, now);
+            this._drawnMarkers.push(m);
         }, this);
         this.requestMapToRender();
     }
 
+    _drawMarker(m, point, anim, now) {
+        const duration = this.layer.options['animationDuration'];
+        const ctx = this.context;
+        const globalAlpha = ctx.globalAlpha;
+        const r = ((now - m.start) % (duration)) / duration;
+        const op = anim.fade ? (r >= 0.5 ? 2 - r * 2 : 1) : 1;
+        const scale = anim.scale ? r : 1;
+        const key = m['cacheKey'];
+        const cache = this._spriteCache[key];
+        const offset = cache.offset,
+            w = cache.canvas.width,
+            h = cache.canvas.height;
+        if (cache && op > 0) {
+            ctx.globalAlpha = globalAlpha * op;
+            ctx.drawImage(cache.canvas, point.x + offset.x - w * scale / 2, point.y + offset.y - h * scale / 2, w * scale, h * scale);
+            ctx.globalAlpha = globalAlpha;
+        }
+    }
+
     _prepare() {
-        const map =  this.getMap(),
-            markers = [];
+        const markers = [];
         const allSymbols = {};
         this.layer.forEach(g => {
             this._currentGeo = g;
             const symbol = g._getInternalSymbol() === g.options['symbol'] ? defaultSymbol : g._getInternalSymbol();
-            const point = map.coordinateToPoint(g.getCoordinates());
 
             const cacheKey = JSON.stringify(symbol);
             if (!allSymbols[cacheKey]) {
                 allSymbols[cacheKey] = symbol;
             }
             markers.push({
-                'point' : point,
+                'coordinates' : g.getCoordinates(),
                 'cacheKey' : cacheKey,
                 //time to start animation
                 'start' : this.layer.options['randomAnimation'] ? Math.random() * this.layer.options['animationDuration'] : 0,
@@ -251,14 +256,16 @@ AnimateMarkerLayer.registerRenderer('canvas', class extends maptalks.renderer.Ov
         clearTimeout(this._animTimeout);
     }
 
-    onZoomStart() {
+    onMoveStart() {
         this._cancelAnim();
     }
 
+    onDragRotateStart() {
+        this._cancelAnim();
+    }
 
-    onZoomEnd() {
-        this._prepare();
-        super.onZoomEnd.apply(this, arguments);
+    onZoomStart() {
+        this._cancelAnim();
     }
 
     onRemove() {
@@ -268,6 +275,7 @@ AnimateMarkerLayer.registerRenderer('canvas', class extends maptalks.renderer.Ov
         delete this._animFn;
         delete this._spriteCache;
         delete this._currentMarkers;
+        delete this._drawnMarkers;
     }
 
     _getAnimation() {
@@ -277,7 +285,7 @@ AnimateMarkerLayer.registerRenderer('canvas', class extends maptalks.renderer.Ov
         };
         const animations = this.layer.options['animation'] ? this.layer.options['animation'].split(',') : [];
         for (let i = 0; i < animations.length; i++) {
-            const trim = maptalks.StringUtil.trim(animations[i]);
+            const trim = trimStr(animations[i]);
             if (trim === 'fade') {
                 anim.fade = true;
             } else if (trim === 'scale') {
@@ -288,3 +296,7 @@ AnimateMarkerLayer.registerRenderer('canvas', class extends maptalks.renderer.Ov
         return anim;
     }
 });
+
+function trimStr(str) {
+    return str.trim ? str.trim() : str.replace(/^\s+|\s+$/g, '');
+}

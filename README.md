@@ -7,6 +7,10 @@ A plugin of [maptalks.js](https://github.com/maptalks/maptalks.js) to draw marke
 
 ![screenshot](https://cloud.githubusercontent.com/assets/13678919/25314149/f47fdec6-2870-11e7-9d87-415d98efc4da.png)
 
+## Examples
+
+* [Locations of this week's earthquakes](https://maptalks.github.io/maptalks.animatemarker/demo/).
+
 ## Install
   
 * Install with npm: ```npm install maptalks.animatemarker```. 
@@ -28,10 +32,6 @@ var animMarkerLayer = new maptalks.AnimateMarkerLayer('anim-markers', data).addT
 ## Supported Browsers
 
 IE 9-11, Chrome, Firefox, other modern and mobile browsers.
-
-## Examples
-
-* [Locations of this week's earthquakes](https://maptalks.github.io/maptalks.animatemarker/demo/).
 
 ## API Reference
 

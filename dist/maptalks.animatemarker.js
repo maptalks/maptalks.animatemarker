@@ -38,10 +38,9 @@ var defaultSymbol = {
 
 var options = {
     'animation': 'scale,fade',
-    'animationOnce': false,
     'randomAnimation': true,
-    'animationDuration': 3000,
-    'fps': 24
+    'animationDuration': 3000
+    // 'globalCompositeOperation' : 'lighter'
 };
 
 var AnimateMarkerLayer = function (_maptalks$VectorLayer) {
@@ -112,14 +111,18 @@ AnimateMarkerLayer.registerRenderer('canvas', function (_maptalks$renderer$Ov) {
     }
 
     _class.prototype.draw = function draw() {
-        if (this._animId) {
-            this._cancelAnim();
-        }
         if (this._needUpdate) {
             this._prepare();
             this._needUpdate = false;
         }
-        this._animate();
+        this.prepareCanvas();
+        var map = this.getMap();
+        var markers = this._currentMarkers;
+        if (this._drawnExtent && map.getExtent().equals(this._drawnExtent)) {
+            markers = this._drawnMarkers;
+        }
+        this._drawAllMarkers(markers);
+        this._drawnExtent = map.getExtent();
         if (!this.layer.isLoaded()) {
             this.completeRender();
         }
@@ -127,6 +130,10 @@ AnimateMarkerLayer.registerRenderer('canvas', function (_maptalks$renderer$Ov) {
 
     _class.prototype.drawOnInteracting = function drawOnInteracting() {
         this._drawAllMarkers(this._drawnMarkers);
+    };
+
+    _class.prototype.isAnimating = function isAnimating() {
+        return true;
     };
 
     _class.prototype.onCanvasCreate = function onCanvasCreate() {
@@ -165,76 +172,39 @@ AnimateMarkerLayer.registerRenderer('canvas', function (_maptalks$renderer$Ov) {
         }
     };
 
-    /**
-     * 隐藏图层
-     */
-
-
-    _class.prototype.hide = function hide() {
-        this._cancelAnim();
-        return _maptalks$renderer$Ov.prototype.hide.call(this);
-    };
-
     _class.prototype._redraw = function _redraw() {
-        this._cancelAnim();
+        delete this._drawnMarkers;
+        delete this._drawnExtent;
         this._needUpdate = true;
-        this.render();
-    };
-
-    _class.prototype._animate = function _animate() {
-        var _this3 = this;
-
-        this.prepareCanvas();
-        this._drawAllMarkers(this._currentMarkers);
-        var now = Date.now();
-        if (!this._animFn) {
-            this._animFn = function () {
-                this._animate();
-            }.bind(this);
-            this._startTime = now;
-        }
-        var options = this.layer.options;
-        if (this.getMap() && !this.getMap().isInteracting() && !(options['animationOnce'] && now - this._startTime > options['animationDuration'])) {
-            var fps = this.layer.options['fps'] || 24;
-            if (fps >= 1000 / 16) {
-                this._animId = maptalks.Util.requestAnimFrame(this._animFn);
-            } else {
-                this._animTimeout = setTimeout(function () {
-                    if (!_this3._animFn) {
-                        // removed
-                        return;
-                    }
-                    if (maptalks.Browser.ie9) {
-                        // ie9 doesn't support RAF
-                        _this3._animFn();
-                    } else {
-                        _this3._animId = maptalks.Util.requestAnimFrame(_this3._animFn);
-                    }
-                }, 1000 / this.layer.options['fps']);
-            }
-        }
     };
 
     _class.prototype._drawAllMarkers = function _drawAllMarkers(markers) {
-        var _this4 = this;
+        var _this3 = this;
 
         var map = this.getMap(),
             extent = map.getContainerExtent();
         var now = this._drawnTime = Date.now();
         var anim = this._drawnAnim = this._getAnimation();
-        this._drawnMarkers = [];
+        var needCheck = markers !== this._drawnMarkers;
+        if (needCheck) {
+            this._drawnMarkers = [];
+        }
         markers.forEach(function (m) {
+            if (!needCheck) {
+                var _point = map._prjToContainerPoint(m.coordinates);
+                _this3._drawMarker(m, _point, anim, now);
+                return;
+            }
             if (!m.g.isVisible()) {
                 return;
             }
-            var point = map.coordinateToContainerPoint(m.coordinates);
+            var point = map._prjToContainerPoint(m.coordinates);
             if (!extent.contains(point)) {
                 return;
             }
-            _this4._drawMarker(m, point, anim, now);
-            _this4._drawnMarkers.push(m);
+            _this3._drawMarker(m, point, anim, now);
+            _this3._drawnMarkers.push(m);
         }, this);
-        this.requestMapToRender();
     };
 
     _class.prototype._drawMarker = function _drawMarker(m, point, anim, now) {
@@ -257,12 +227,13 @@ AnimateMarkerLayer.registerRenderer('canvas', function (_maptalks$renderer$Ov) {
     };
 
     _class.prototype._prepare = function _prepare() {
-        var _this5 = this;
+        var _this4 = this;
 
         var markers = [];
         var allSymbols = {};
+        var projection = this.getMap().getProjection();
         this.layer.forEach(function (g) {
-            _this5._currentGeo = g;
+            _this4._currentGeo = g;
             var symbol = g._getInternalSymbol() === g.options['symbol'] ? defaultSymbol : g._getInternalSymbol();
 
             var cacheKey = JSON.stringify(symbol);
@@ -270,10 +241,10 @@ AnimateMarkerLayer.registerRenderer('canvas', function (_maptalks$renderer$Ov) {
                 allSymbols[cacheKey] = symbol;
             }
             markers.push({
-                'coordinates': g.getCoordinates(),
+                'coordinates': projection.project(g.getCoordinates()),
                 'cacheKey': cacheKey,
                 //time to start animation
-                'start': _this5.layer.options['randomAnimation'] ? Math.random() * _this5.layer.options['animationDuration'] : 0,
+                'start': _this4.layer.options['randomAnimation'] ? Math.random() * _this4.layer.options['animationDuration'] : 0,
                 'g': g
             });
         });
@@ -290,31 +261,11 @@ AnimateMarkerLayer.registerRenderer('canvas', function (_maptalks$renderer$Ov) {
         }
     };
 
-    _class.prototype._cancelAnim = function _cancelAnim() {
-        maptalks.Util.cancelAnimFrame(this._animId);
-        clearTimeout(this._animTimeout);
-    };
-
-    _class.prototype.onMoveStart = function onMoveStart() {
-        this._cancelAnim();
-    };
-
-    _class.prototype.onDragRotateStart = function onDragRotateStart() {
-        this._cancelAnim();
-    };
-
-    _class.prototype.onZoomStart = function onZoomStart() {
-        this._cancelAnim();
-    };
-
     _class.prototype.onRemove = function onRemove() {
-        if (this._animId) {
-            this._cancelAnim();
-        }
-        delete this._animFn;
         delete this._spriteCache;
         delete this._currentMarkers;
         delete this._drawnMarkers;
+        delete this._drawnExtent;
     };
 
     _class.prototype._getAnimation = function _getAnimation() {

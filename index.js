@@ -24,10 +24,9 @@ const defaultSymbol = {
 
 const options = {
     'animation' : 'scale,fade',
-    'animationOnce' : false,
     'randomAnimation' : true,
-    'animationDuration' : 3000,
-    'fps' : 24
+    'animationDuration' : 3000
+    // 'globalCompositeOperation' : 'lighter'
 };
 
 export class AnimateMarkerLayer extends maptalks.VectorLayer {
@@ -80,14 +79,18 @@ AnimateMarkerLayer.registerJSONType('AnimateMarkerLayer');
 AnimateMarkerLayer.registerRenderer('canvas', class extends maptalks.renderer.OverlayLayerCanvasRenderer {
 
     draw() {
-        if (this._animId) {
-            this._cancelAnim();
-        }
         if (this._needUpdate) {
             this._prepare();
             this._needUpdate = false;
         }
-        this._animate();
+        this.prepareCanvas();
+        const map = this.getMap();
+        let markers = this._currentMarkers;
+        if (this._drawnExtent && map.getExtent().equals(this._drawnExtent)) {
+            markers = this._drawnMarkers;
+        }
+        this._drawAllMarkers(markers);
+        this._drawnExtent = map.getExtent();
         if (!this.layer.isLoaded()) {
             this.completeRender();
         }
@@ -95,6 +98,10 @@ AnimateMarkerLayer.registerRenderer('canvas', class extends maptalks.renderer.Ov
 
     drawOnInteracting() {
         this._drawAllMarkers(this._drawnMarkers);
+    }
+
+    isAnimating() {
+        return true;
     }
 
     onCanvasCreate() {
@@ -133,51 +140,10 @@ AnimateMarkerLayer.registerRenderer('canvas', class extends maptalks.renderer.Ov
         }
     }
 
-    /**
-     * 隐藏图层
-     */
-    hide() {
-        this._cancelAnim();
-        return super.hide();
-    }
-
     _redraw() {
-        this._cancelAnim();
+        delete this._drawnMarkers;
+        delete this._drawnExtent;
         this._needUpdate = true;
-        this.render();
-    }
-
-    _animate() {
-        this.prepareCanvas();
-        this._drawAllMarkers(this._currentMarkers);
-        const now = Date.now();
-        if (!this._animFn) {
-            this._animFn = function () {
-                this._animate();
-            }.bind(this);
-            this._startTime = now;
-        }
-        const options = this.layer.options;
-        if (this.getMap() && !this.getMap().isInteracting() &&
-            !(options['animationOnce'] && (now - this._startTime) > options['animationDuration'])) {
-            const fps = this.layer.options['fps'] || 24;
-            if (fps >= 1000 / 16) {
-                this._animId = maptalks.Util.requestAnimFrame(this._animFn);
-            } else {
-                this._animTimeout = setTimeout(() => {
-                    if (!this._animFn) {
-                        // removed
-                        return;
-                    }
-                    if (maptalks.Browser.ie9) {
-                        // ie9 doesn't support RAF
-                        this._animFn();
-                    } else {
-                        this._animId = maptalks.Util.requestAnimFrame(this._animFn);
-                    }
-                }, 1000 / this.layer.options['fps']);
-            }
-        }
     }
 
     _drawAllMarkers(markers) {
@@ -185,19 +151,26 @@ AnimateMarkerLayer.registerRenderer('canvas', class extends maptalks.renderer.Ov
             extent = map.getContainerExtent();
         const now = this._drawnTime = Date.now();
         const anim = this._drawnAnim = this._getAnimation();
-        this._drawnMarkers = [];
+        const needCheck = (markers !== this._drawnMarkers);
+        if (needCheck) {
+            this._drawnMarkers = [];
+        }
         markers.forEach(m => {
+            if (!needCheck) {
+                const point = map._prjToContainerPoint(m.coordinates);
+                this._drawMarker(m, point, anim, now);
+                return;
+            }
             if (!m.g.isVisible()) {
                 return;
             }
-            const point = map.coordinateToContainerPoint(m.coordinates);
+            const point = map._prjToContainerPoint(m.coordinates);
             if (!extent.contains(point)) {
                 return;
             }
             this._drawMarker(m, point, anim, now);
             this._drawnMarkers.push(m);
         }, this);
-        this.requestMapToRender();
     }
 
     _drawMarker(m, point, anim, now) {
@@ -222,6 +195,7 @@ AnimateMarkerLayer.registerRenderer('canvas', class extends maptalks.renderer.Ov
     _prepare() {
         const markers = [];
         const allSymbols = {};
+        const projection = this.getMap().getProjection();
         this.layer.forEach(g => {
             this._currentGeo = g;
             const symbol = g._getInternalSymbol() === g.options['symbol'] ? defaultSymbol : g._getInternalSymbol();
@@ -231,7 +205,7 @@ AnimateMarkerLayer.registerRenderer('canvas', class extends maptalks.renderer.Ov
                 allSymbols[cacheKey] = symbol;
             }
             markers.push({
-                'coordinates' : g.getCoordinates(),
+                'coordinates' :  projection.project(g.getCoordinates()),
                 'cacheKey' : cacheKey,
                 //time to start animation
                 'start' : this.layer.options['randomAnimation'] ? Math.random() * this.layer.options['animationDuration'] : 0,
@@ -251,31 +225,11 @@ AnimateMarkerLayer.registerRenderer('canvas', class extends maptalks.renderer.Ov
         }
     }
 
-    _cancelAnim() {
-        maptalks.Util.cancelAnimFrame(this._animId);
-        clearTimeout(this._animTimeout);
-    }
-
-    onMoveStart() {
-        this._cancelAnim();
-    }
-
-    onDragRotateStart() {
-        this._cancelAnim();
-    }
-
-    onZoomStart() {
-        this._cancelAnim();
-    }
-
     onRemove() {
-        if (this._animId) {
-            this._cancelAnim();
-        }
-        delete this._animFn;
         delete this._spriteCache;
         delete this._currentMarkers;
         delete this._drawnMarkers;
+        delete this._drawnExtent;
     }
 
     _getAnimation() {

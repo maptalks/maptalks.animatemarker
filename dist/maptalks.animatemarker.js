@@ -1,5 +1,5 @@
 /*!
- * maptalks.animatemarker v0.2.0
+ * maptalks.animatemarker v0.3.0
  * LICENSE : MIT
  * (c) 2016-2017 maptalks.org
  */
@@ -132,8 +132,11 @@ AnimateMarkerLayer.registerRenderer('canvas', function (_maptalks$renderer$Ov) {
         this._drawAllMarkers(this._drawnMarkers);
     };
 
-    _class.prototype.isAnimating = function isAnimating() {
-        return true;
+    _class.prototype.needToRedraw = function needToRedraw() {
+        if (this.layer.options['animation']) {
+            return true;
+        }
+        return _maptalks$renderer$Ov.prototype.needToRedraw.call(this);
     };
 
     _class.prototype.onCanvasCreate = function onCanvasCreate() {
@@ -297,6 +300,6 @@ exports.AnimateMarkerLayer = AnimateMarkerLayer;
 
 Object.defineProperty(exports, '__esModule', { value: true });
 
-typeof console !== 'undefined' && console.log('maptalks.animatemarker v0.2.0, requires maptalks@^0.25.0.');
+typeof console !== 'undefined' && console.log('maptalks.animatemarker v0.3.0, requires maptalks@^0.25.0.');
 
 })));

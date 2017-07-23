@@ -1,6 +1,6 @@
 # maptalks.animatemarker
 
-[![CircleCI](https://circleci.com/gh/maptalks/maptalks.animatemarker.svg?style=shield)](https://circleci.com/gh/MapTalks/maptalks.animatemarker)
+[![CircleCI](https://circleci.com/gh/maptalks/maptalks.animatemarker/tree/master.svg?style=shield)](https://circleci.com/gh/MapTalks/maptalks.animatemarker)
 [![NPM Version](https://img.shields.io/npm/v/maptalks.animatemarker.svg)](https://github.com/maptalks/maptalks.animatemarker)
 
 A plugin of [maptalks.js](https://github.com/maptalks/maptalks.js) to draw markers with animation.

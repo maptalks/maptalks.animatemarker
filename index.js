@@ -100,8 +100,11 @@ AnimateMarkerLayer.registerRenderer('canvas', class extends maptalks.renderer.Ov
         this._drawAllMarkers(this._drawnMarkers);
     }
 
-    isAnimating() {
-        return true;
+    needToRedraw() {
+        if (this.layer.options['animation']) {
+            return true;
+        }
+        return super.needToRedraw();
     }
 
     onCanvasCreate() {

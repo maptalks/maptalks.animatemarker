@@ -97,6 +97,9 @@ AnimateMarkerLayer.registerRenderer('canvas', class extends maptalks.renderer.Ov
     }
 
     drawOnInteracting() {
+        if (!this._drawnMarkers || this._drawnMarkers.length === 0) {
+            return;
+        }
         this._drawAllMarkers(this._drawnMarkers);
     }
 

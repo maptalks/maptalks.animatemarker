@@ -2,9 +2,9 @@
 <html>
 <head>
     <title>maptalks.animatelayer demo</title>
-    <script src="https://unpkg.com/maptalks/dist/maptalks.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/maptalks/dist/maptalks.min.js"></script>
     <script src="../dist/maptalks.animatemarker.js"></script>
-    <link type="text/css" rel="stylesheet" href="https://unpkg.com/maptalks@<2.0.0/dist/maptalks.css">
+    <link type="text/css" rel="stylesheet" href="https://cdn.jsdelivr.net/npm/maptalks/dist/maptalks.css">
     <style>
         #map { width: 1100px; height: 800px; }
     </style>
@@ -20,8 +20,8 @@
             'content' : '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, &copy; <a href="https://carto.com/attributions">CARTO</a>, &copy; earthquake data from <a href="https://earthquake.usgs.gov/earthquakes/">usgs.gov</a>'
         },
         baseLayer : new maptalks.TileLayer("base",{
-            'urlTemplate' : 'http://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}.png',
-            'subdomains'  : ['a','b','c','d','e']
+            'urlTemplate' : 'https://cartodb-basemaps-{s}.global.ssl.fastly.net/dark_nolabels/{z}/{x}/{y}.png',
+            'subdomains'  : ['a','b','c','d']
         })
     });
 

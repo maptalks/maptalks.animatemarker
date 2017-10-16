@@ -1,6 +1,6 @@
 {
   "name": "maptalks.animatemarker",
-  "version": "0.3.1",
+  "version": "0.4.0",
   "description": "A maptalks Layer to animate markers.",
   "license": "MIT",
   "repository": {
@@ -17,7 +17,7 @@
     "test": "gulp test",
     "pretest": "npm run lint",
     "prepublish": "npm run lint && gulp minify",
-    "build" : "gulp minify"
+    "build": "gulp minify"
   },
   "devDependencies": {
     "babel-eslint": "^7.1.1",

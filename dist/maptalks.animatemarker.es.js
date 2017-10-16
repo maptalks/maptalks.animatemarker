@@ -6,11 +6,7 @@
 /*!
  * requires maptalks@>=0.25.0 
  */
-(function (global, factory) {
-	typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports, require('maptalks')) :
-	typeof define === 'function' && define.amd ? define(['exports', 'maptalks'], factory) :
-	(factory((global.maptalks = global.maptalks || {}),global.maptalks));
-}(this, (function (exports,maptalks) { 'use strict';
+import { Geometry, Marker, VectorLayer, renderer } from 'maptalks';
 
 function _defaults(obj, defaults) { var keys = Object.getOwnPropertyNames(defaults); for (var i = 0; i < keys.length; i++) { var key = keys[i]; var value = Object.getOwnPropertyDescriptor(defaults, key); if (value && value.configurable && obj[key] === undefined) { Object.defineProperty(obj, key, value); } } return obj; }
 
@@ -53,11 +49,11 @@ var AnimateMarkerLayer = function (_maptalks$VectorLayer) {
     }
 
     AnimateMarkerLayer.prototype.addGeometry = function addGeometry(points) {
-        if (points instanceof maptalks.Geometry) {
+        if (points instanceof Geometry) {
             points = [points];
         }
         points.forEach(function (point, index) {
-            if (!(point instanceof maptalks.Marker)) {
+            if (!(point instanceof Marker)) {
                 throw new Error('The geometry at ' + index + ' to add is not a maptalks.Marker');
             }
         });
@@ -82,7 +78,7 @@ var AnimateMarkerLayer = function (_maptalks$VectorLayer) {
         var geos = profile['geometries'];
         var geometries = [];
         for (var i = 0; i < geos.length; i++) {
-            var geo = maptalks.Geometry.fromJSON(geos[i]);
+            var geo = Geometry.fromJSON(geos[i]);
             if (geo) {
                 geometries.push(geo);
             }
@@ -95,7 +91,7 @@ var AnimateMarkerLayer = function (_maptalks$VectorLayer) {
     };
 
     return AnimateMarkerLayer;
-}(maptalks.VectorLayer);
+}(VectorLayer);
 
 AnimateMarkerLayer.mergeOptions(options);
 
@@ -262,7 +258,7 @@ AnimateMarkerLayer.registerRenderer('canvas', function (_maptalks$renderer$Ov) {
         this._spriteCache = {};
         for (var p in allSymbols) {
             var symbol = allSymbols[p];
-            var sprite = new maptalks.Marker([0, 0], { 'symbol': symbol })._getSprite(this.resources);
+            var sprite = new Marker([0, 0], { 'symbol': symbol })._getSprite(this.resources);
             this._spriteCache[p] = sprite;
         }
     };
@@ -293,16 +289,12 @@ AnimateMarkerLayer.registerRenderer('canvas', function (_maptalks$renderer$Ov) {
     };
 
     return _class;
-}(maptalks.renderer.OverlayLayerCanvasRenderer));
+}(renderer.OverlayLayerCanvasRenderer));
 
 function trimStr(str) {
     return str.trim ? str.trim() : str.replace(/^\s+|\s+$/g, '');
 }
 
-exports.AnimateMarkerLayer = AnimateMarkerLayer;
-
-Object.defineProperty(exports, '__esModule', { value: true });
+export { AnimateMarkerLayer };
 
 typeof console !== 'undefined' && console.log('maptalks.animatemarker v0.4.0, requires maptalks@>=0.25.0.');
-
-})));
